@@ -1,0 +1,24 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual Environment ---
+venv/
+.venv/
+env/
+
+# --- Environment Variables ---
+.env
+
+# --- AI Models / Large Files (容量制限対策) ---
+# GeoCLIPのモデルファイルなどが自動ダウンロードされた場合用
+*.pt
+*.pth
+*.onnx
+data/
+models/
+
+# --- Database (SQLiteを使う場合) ---
+*.sqlite3
+*.db
