@@ -17,8 +17,16 @@ env/
 *.pth
 *.onnx
 data/
-models/
-
+# modelsフォルダは許可するが、その中の重いファイルは無視する
+models/*.pt
+models/*.pth
+models/*.bin
 # --- Database (SQLiteを使う場合) ---
 *.sqlite3
 *.db
+
+# テスト・静的解析のキャッシュ
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
