@@ -3,7 +3,6 @@ from fastapi.security import OAuth2PasswordBearer
 from app.db.supabase import supabase
 
 # Swagger UIで "Authorize" ボタンを表示させるための設定
-# トークンを受け取るURLを指定（今回は仮で/loginとしていますが、実際はSupabaseが発行します）
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/access-token")
 
 def get_current_user(token: str = Depends(oauth2_scheme)):

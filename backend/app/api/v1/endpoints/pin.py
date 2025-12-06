@@ -3,5 +3,5 @@ from fastapi import APIRouter
 router = APIRouter()
 
 @router.get("/")
-def get_maps():
-    return {"message": "Maps endpoint"}
+def get_pin():
+    return {"message": "Pin endpoint"}
