@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.v1.api import api_router
 
 app = FastAPI(title="Pinaly API")
+
+app.include_router(api_router, prefix="/api/v1")
 
 # フロントエンド(React)からのアクセスを許可する設定
 origins = [
