@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from app.models.auth import UserRegister, UserLogin, Token
+from app.schemas.auth import UserRegister, UserLogin, Token
 from app.db.supabase import supabase
 from app.api import deps
 from supabase_auth.errors import AuthApiError # エラーハンドリング
