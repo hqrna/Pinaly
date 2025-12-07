@@ -1,41 +1,48 @@
 import { useState, useCallback, useEffect } from 'react';
 import { MapView } from '../components/Map/MapView';
+import { UploadModal } from '../components/Upload/UploadModal';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import type { Pin } from '../types/pin';
+import type { Pin } from '../types';
 import L from 'leaflet';
 
 export const MapPage = () => {
   const { logout } = useAuth();
   const [pins, setPins] = useState<Pin[]>([]);
   
-  // 初期値は東京駅にしておくが、isLoadingでガードするので一瞬見えることはない
+  // 地図の状態管理
   const [currentLocation, setCurrentLocation] = useState<[number, number]>([35.681236, 139.767125]);
-  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(!!navigator.geolocation);
+  const [currentBounds, setCurrentBounds] = useState<L.LatLngBounds | null>(null);
+
+  
+  // モーダルの状態管理
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 現在地を取得
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // 成功: 現在地をセット
-          const { latitude, longitude } = position.coords;
-          setCurrentLocation([latitude, longitude]);
-          setIsLoadingLocation(false);
-        },
-        (error) => {
-          // 失敗: 東京のまま (エラーログだけ出す)
-          console.warn("現在地の取得に失敗:", error);
-          setIsLoadingLocation(false);
-        }
-      );
-    } else {
-      // 非対応ブラウザ
-      setIsLoadingLocation(false);
+    if (!navigator.geolocation) {
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // 成功: 現在地をセット
+        const { latitude, longitude } = position.coords;
+        setCurrentLocation([latitude, longitude]);
+        setIsLoadingLocation(false);
+      },
+      (error) => {
+        // 失敗: 東京のまま (エラーログだけ出す)
+        console.warn("現在地の取得に失敗:", error);
+        setIsLoadingLocation(false);
+      }
+    );
   }, []);
 
+  // ピン取得関数
   const fetchPins = useCallback(async (bounds: L.LatLngBounds) => {
+    setCurrentBounds(bounds);
     try {
       const params = {
         min_lat: bounds.getSouth(),
@@ -50,13 +57,24 @@ export const MapPage = () => {
     }
   }, []);
 
-  // ★位置情報取得中はローディング画面を出す
+  // アップロード成功時にピンをリフレッシュ
+  const handleUploadSuccess = () => {
+    if (currentBounds) {
+      fetchPins(currentBounds);
+    }
+  };
+
+  // 位置情報取得中はローディング画面を表示
   if (isLoadingLocation) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <p>現在地を取得中...</p>
       </div>
     );
+  }
+
+  if (isLoadingLocation) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><p>現在地を取得中...</p></div>;
   }
 
   return (
@@ -70,9 +88,25 @@ export const MapPage = () => {
 
       <MapView 
         pins={pins} 
-        center={currentLocation} // ★取得済みの座標を渡す
+        center={currentLocation}
         onBoundsChange={fetchPins} 
       />
+
+      {/* 投稿ボタン (FAB) */}
+      <button 
+        className="fab-button" 
+        onClick={() => setIsModalOpen(true)}
+      >
+        +
+      </button>
+
+      {/* アップロードモーダル */}
+      <UploadModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onUploadSuccess={handleUploadSuccess} 
+      />
+
     </div>
   );
 };

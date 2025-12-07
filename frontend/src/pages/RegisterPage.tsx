@@ -2,22 +2,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import { useState } from 'react';
-
-// 1. フォームの入力項目を型定義します
-type RegisterFormInputs = {
-  name: string;
-  email: string;
-  password: string;
-};
-
-// 2. 想定されるAPIエラーの型を定義します (Axiosなどのレスポンス構造に合わせる)
-type ApiError = {
-  response?: {
-    data?: {
-      detail?: string;
-    };
-  };
-};
+import type { ApiError, RegisterFormInputs } from '../types';
 
 export const RegisterPage = () => {
   // useFormに型引数を渡します

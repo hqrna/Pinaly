@@ -93,3 +93,64 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* --- FAB (地図上の＋ボタン) --- */
+.fab-button {
+  position: absolute;
+  bottom: 30px;
+  right: 20px;
+  width: 60px;
+  height: 60px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 50%;
+  border: none;
+  font-size: 30px;
+  font-weight: bold;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  cursor: pointer;
+  z-index: 1000; /* 地図より手前に */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+.fab-button:hover {
+  background-color: #0056b3;
+  transform: scale(1.1);
+}
+
+/* --- モーダル全体 (背景) --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000; /* 最前面 */
+}
+
+/* --- モーダルの中身 --- */
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  text-align: center;
+}
+
+/* プレビュー画像 */
+.preview-image {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  margin: 10px 0;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}

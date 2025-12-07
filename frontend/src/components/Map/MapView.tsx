@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
-import type { Pin } from '../../types/pin';
+import type { Pin } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 
@@ -71,7 +71,7 @@ export const MapView = ({ pins, center, onBoundsChange }: MapViewProps) => {
         <Marker 
           key={pin.id} 
           position={[pin.latitude, pin.longitude]}
-          // icon={createIcon(pin.thumbnail_url)} 
+          icon={createIcon(pin.thumbnail_url)} 
         >
           <Popup>
              <div style={{ textAlign: 'center' }}>
