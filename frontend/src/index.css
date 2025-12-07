@@ -1,3 +1,5 @@
+@import 'leaflet/dist/leaflet.css';
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -22,12 +24,37 @@ a:hover {
   color: #535bf2;
 }
 
-body {
+html,body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  /* display: flex; */
+  /* place-items: center; */
+  /* min-width: 320px; */
+  /* min-height: 100vh; */
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Reactがマウントするルート要素 */
+#root {
+  height: 100%; /* ★重要: ここも高さを100%にする */
+  width: 100%;
+}
+
+/* 地図コンテナを全画面にする設定 */
+.leaflet-container {
+  width: 100%;
+  height: 100vh;
+  z-index: 0;
+}
+
+/* カスタムマーカー（画像のサムネイル）用のスタイル */
+.custom-marker-icon {
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  background-size: cover;
+  background-position: center;
+  background-color: #ddd;
 }
 
 h1 {
