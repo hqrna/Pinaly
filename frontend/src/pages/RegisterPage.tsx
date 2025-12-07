@@ -30,7 +30,18 @@ export const RegisterPage = () => {
         </div>
         <div>
           <label>メールアドレス</label>
-          <input type="email" {...register('email', { required: true })} style={{ width: '100%' }} />
+            <input 
+              type="email" 
+              {...register('email', { 
+                required: 'メールアドレスは必須です',
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: '正しいメールアドレス形式で入力してください'
+                }
+              })} 
+              style={{ width: '100%' }} 
+            />
+          {errors.email && <span style={{ color: 'red' }}>{errors.email.message as string}</span>}
         </div>
         <div>
           <label>パスワード</label>
