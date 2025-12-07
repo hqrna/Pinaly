@@ -5,7 +5,7 @@ from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
 from fastapi import UploadFile, HTTPException
 from app.db.supabase import supabase
-
+from app.schemas.image import ImageUpdate
 # 対応画像形式
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 
@@ -167,3 +167,90 @@ async def delete_image(image_id: int, user_id: str):
         pass # Storage削除失敗はログに残す程度で、APIとしては成功を返す運用が多い
     
     return True
+
+def _update_image_tags(image_id: int, tag_names: List[str]):
+    """
+    画像に紐付くタグを更新する。
+    1. 既存のタグ紐付けを削除
+    2. 入力されたタグ名が tags テーブルになければ作成
+    3. image_tags テーブルに紐付けを作成
+    """
+    if tag_names is None:
+        return
+
+    # 1. 既存の紐付けを全削除 (洗い替え)
+    supabase.table("image_tags").delete().eq("image_id", image_id).execute()
+
+    if not tag_names:
+        return
+
+    # 2. タグIDの解決 (Find or Create)
+    tag_ids = []
+    
+    # 既存タグを一括取得
+    existing_tags = supabase.table("tags").select("id, name").in_("name", tag_names).execute()
+    existing_map = {t["name"]: t["id"] for t in existing_tags.data}
+
+    for name in tag_names:
+        name = name.strip()
+        if not name:
+            continue
+            
+        if name in existing_map:
+            tag_ids.append(existing_map[name])
+        else:
+            # 新規作成
+            # (注意: tagsテーブルのポリシーによっては insert 権限が必要)
+            res = supabase.table("tags").insert({"name": name}).execute()
+            if res.data:
+                tag_ids.append(res.data[0]["id"])
+    
+    # 3. 新しい紐付けを登録
+    if tag_ids:
+        insert_data = [{"image_id": image_id, "tag_id": tid} for tid in tag_ids]
+        supabase.table("image_tags").insert(insert_data).execute()
+
+
+# --- 修正: 詳細取得 (タグ情報も取得するように変更) ---
+async def get_image_detail(image_id: int, user_id: str):
+    # 画像本体
+    img_res = supabase.table("images").select("*").eq("id", image_id).eq("user_id", user_id).single().execute()
+    if not img_res.data:
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    image = img_res.data
+    
+    # Locations結合
+    loc_res = supabase.table("locations").select("*").eq("image_id", image_id).maybe_single().execute()
+    if loc_res.data:
+        image["latitude"] = loc_res.data["latitude"]
+        image["longitude"] = loc_res.data["longitude"]
+        image["geoname"] = loc_res.data["geoname"]
+
+    # ★追加: Tags結合
+    # Supabaseの結合クエリで tags を取得する
+    tags_res = supabase.table("image_tags").select("tag_id, tags(id, name)").eq("image_id", image_id).execute()
+    
+    # データ整形: [{"tag_id": 1, "tags": {"id": 1, "name": "..."}}] -> [{"id": 1, "name": "..."}]
+    image["tags"] = [item["tags"] for item in tags_res.data if item.get("tags")]
+    
+    return image
+
+
+# --- 追加: 画像情報更新 (PUT対応) ---
+async def update_image_info(image_id: int, user_id: str, update_in: ImageUpdate):
+    # まず更新データ作成
+    data = update_in.model_dump(exclude={"tags"}, exclude_unset=True) # tagsは別処理
+    
+    if data:
+        data["updated_at"] = datetime.now().isoformat()
+        res = supabase.table("images").update(data).eq("id", image_id).eq("user_id", user_id).execute()
+        if not res.data:
+             raise HTTPException(status_code=404, detail="Image not found")
+
+    # タグの更新 (tagsフィールドが含まれている場合のみ)
+    if update_in.tags is not None:
+        _update_image_tags(image_id, update_in.tags)
+    
+    # 更新後の最新状態を返す
+    return await get_image_detail(image_id, user_id)
