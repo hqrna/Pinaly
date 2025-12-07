@@ -65,27 +65,8 @@ async def update_image(
     画像のメタ情報（タイトル、コメント、お気に入り等）を更新
     ※ 今回はservice層に関数を作らずここでsupabaseを呼ぶ簡易実装例
     """
-    from app.db.supabase import supabase
-    
-    # 更新データを辞書化（Noneは除外）
-    update_data = image_in.model_dump(exclude_unset=True)
-    
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No data provided to update")
-
-    update_data["updated_at"] = datetime.now().isoformat()
-
-    res = supabase.table("images")\
-        .update(update_data)\
-        .eq("id", id)\
-        .eq("user_id", current_user.id)\
-        .execute()
-
-    if not res.data:
-        raise HTTPException(status_code=404, detail="Image not found or permission denied")
-    
     # 詳細情報を再取得して返す（locations情報なども含めるため）
-    return await image_service.get_image_detail(id, current_user.id)
+    return await image_service.update_image_info(id, current_user.id, image_in)
 
 # ------------------------------------------------------------------
 # ⑤ 画像削除 (F-07)
