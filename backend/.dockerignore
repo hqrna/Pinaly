@@ -1,0 +1,32 @@
+# --- 既存の設定 ---
+__pycache__
+venv
+.env
+.git
+
+# --- 追加推奨 ---
+# コンパイル済みファイル（__pycache__以外に生成される場合があるため）
+*.pyc
+*.pyo
+*.pyd
+
+# テスト・型チェックのキャッシュ（これらが変わるたびにビルドしたくない）
+.pytest_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# ローカルデータベース（コンテナ内にコピーしてしまうとデータが先祖返りしたり重くなる）
+db.sqlite3
+*.sqlite3
+
+# ログファイル
+*.log
+
+# IDE・エディタ設定
+.vscode
+.idea
+
+# OS固有のファイル（MacのFinder情報など）
+.DS_Store
+Thumbs.db

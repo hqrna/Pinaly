@@ -1,0 +1,24 @@
+# --- 既存の設定 ---
+node_modules
+build
+dist
+.env
+.git
+
+# --- 追加推奨 ---
+# npm / yarn のログファイル（エラーが出るたびに書き換わり、キャッシュ切れの原因になる）
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# テストカバレッジレポート
+coverage
+.nyc_output
+
+# IDE・エディタ設定
+.vscode
+.idea
+
+# OS固有のファイル
+.DS_Store
+Thumbs.db
