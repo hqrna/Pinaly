@@ -26,17 +26,13 @@ a:hover {
 
 html,body {
   margin: 0;
-  /* display: flex; */
-  /* place-items: center; */
-  /* min-width: 320px; */
-  /* min-height: 100vh; */
   padding: 0;
   overflow: hidden;
 }
 
 /* Reactがマウントするルート要素 */
 #root {
-  height: 100%; /* ★重要: ここも高さを100%にする */
+  height: 100%;
   width: 100%;
 }
 

@@ -1,6 +1,4 @@
-// src/types/index.ts
-
-// 共通のエラー型（RegisterPageなどでも使えるように共通化）
+// --- APIエラーレスポンスの型定義
 export type ApiError = {
   response?: {
     data?: {
@@ -9,30 +7,41 @@ export type ApiError = {
   };
 };
 
-// ユーザー登録用の型（先ほどの実装分もここに入れると良いです）
+// --- ユーザー情報の定義 ---
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+// --- ログインAPIのレスポンス ---
+export type AuthResponse = {
+  access_token: string;
+  token_type: string;
+};
+
+// --- AuthContextで提供される機能とデータの型定義 ---
+export interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  login: (token: string) => Promise<void>;
+  logout: () => void;
+}
+
+// --- ユーザー登録フォームの入力値 ---
 export type RegisterFormInputs = {
   name: string;
   email: string;
   password: string;
 };
 
-// ログインフォーム用
+// --- ログインフォームの入力値 ---
 export type LoginFormInputs = {
   email: string;
   password: string;
 };
 
-// ログインAPIのレスポンス用 (バックエンドの返却値に合わせる)
-export type AuthResponse = {
-  access_token: string;
-  token_type: string;
-};
-
-// 画像アップロード用のフォーム入力型
-export type UploadFormInputs = {
-  file: FileList;
-};
-
+// --- マップ上に表示するピン（画像）の情報 ---
 export interface Pin {
   id: number;
   latitude: number;
@@ -40,3 +49,8 @@ export interface Pin {
   thumbnail_url: string;
   title: string | null;
 }
+
+// 画像アップロードフォームの入力値 ---
+export type UploadFormInputs = {
+  file: FileList;
+};
