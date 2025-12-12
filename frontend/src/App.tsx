@@ -2,10 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { MapPage } from './pages/MapPage'; // ★追加
+import { MapPage } from './pages/MapPage';
+import { type ReactNode } from 'react';
 
 // ログイン必須ルート用コンポーネント
-const PrivateRoute = ({ children }: { children: JSX.Element }) => {
+const PrivateRoute = ({ children }: { children: ReactNode}) => {
   const { user, loading } = useAuth();
   if (loading) return <div>Loading...</div>;
   return user ? children : <Navigate to="/login" />;
@@ -21,7 +22,6 @@ function App() {
           
           <Route path="/" element={
             <PrivateRoute>
-              {/* 仮のHomeを削除し、本物の地図ページを表示 */}
               <MapPage /> 
             </PrivateRoute>
           } />
