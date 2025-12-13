@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import api from '../../services/api';
+import api from '../../lib/axios';
 import type { UploadFormInputs } from '../../types';
 
 interface UploadModalProps {
@@ -9,14 +9,22 @@ interface UploadModalProps {
   onUploadSuccess: () => void;
 }
 
+// ------------------------------------------------------------------
+// UploadModal：画像ファイルを選択し、プレビュー表示とアップロードを行う
+// ------------------------------------------------------------------
+
 export const UploadModal = ({ isOpen, onClose, onUploadSuccess }: UploadModalProps) => {
+
+  // --- Hooks & States ---
   const { register, handleSubmit, reset } = useForm<UploadFormInputs>();
-  
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // モーダルが閉じていれば何も描画しない
   if (!isOpen) return null;
 
+  // --- Handlers ---
   // ファイル選択時のプレビュー処理
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -25,9 +33,15 @@ export const UploadModal = ({ isOpen, onClose, onUploadSuccess }: UploadModalPro
     }
   };
 
-  // アップロード処理
+  // 閉じる処理（Stateのリセットを含む）
+  const handleClose = () => {
+    reset();
+    setPreviewUrl(null);
+    onClose();
+  };
+
+  // アップロード送信処理
   const onSubmit: SubmitHandler<UploadFormInputs> = async (data) => {
-    // data.file は FileList 型なので安全にアクセス可能
     const file = data.file[0];
     if (!file) return;
 
@@ -41,10 +55,8 @@ export const UploadModal = ({ isOpen, onClose, onUploadSuccess }: UploadModalPro
       });
 
       alert('アップロード完了！');
-      reset();
-      setPreviewUrl(null);
+      handleClose();
       onUploadSuccess();
-      onClose();
     } catch (error) {
       console.error(error);
       alert('アップロードに失敗しました');
@@ -53,9 +65,10 @@ export const UploadModal = ({ isOpen, onClose, onUploadSuccess }: UploadModalPro
     }
   };
 
-  // register関数の戻り値を変数に格納
+  // react-hook-form の登録（onChangeをカスタマイズするため変数化）
   const fileUploadRegister = register('file', { required: true });
 
+  // --- Render ---
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -73,12 +86,10 @@ export const UploadModal = ({ isOpen, onClose, onUploadSuccess }: UploadModalPro
               onFileChange(e);
             }}
           />
-
           {/* プレビュー表示 */}
           {previewUrl && (
             <img src={previewUrl} alt="Preview" className="preview-image" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
           )}
-
           {/* ボタンエリア */}
           <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
             <button
@@ -98,6 +109,7 @@ export const UploadModal = ({ isOpen, onClose, onUploadSuccess }: UploadModalPro
             </button>
           </div>
         </form>
+        
       </div>
     </div>
   );

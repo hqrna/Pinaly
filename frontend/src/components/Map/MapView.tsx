@@ -5,7 +5,11 @@ import type { Pin } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 
-// 地図の中心を移動させるためのコンポーネント
+// ------------------------------------------------------------------
+// Helper Components
+// ------------------------------------------------------------------
+
+// --- RecenterMap：props.centerが変更された時に、地図の視点を自動的に移動させるコンポーネント ---
 const RecenterMap = ({ center }: { center: [number, number] }) => {
   const map = useMap();
   useEffect(() => {
@@ -14,7 +18,7 @@ const RecenterMap = ({ center }: { center: [number, number] }) => {
   return null;
 };
 
-// ... MapEvents, createIcon などはそのまま ...
+// --- MapEvents：地図のドラッグやズーム終了等のイベントを検知し、現在の表示範囲(bounds)を親へ通知する ---
 const MapEvents = ({ onMoveEnd }: { onMoveEnd: (bounds: L.LatLngBounds) => void }) => {
   const map = useMapEvents({
     moveend: () => {
@@ -24,15 +28,27 @@ const MapEvents = ({ onMoveEnd }: { onMoveEnd: (bounds: L.LatLngBounds) => void 
   return null;
 };
 
+// ------------------------------------------------------------------
+// Main Components
+// ------------------------------------------------------------------
+
 interface MapViewProps {
   pins: Pin[];
   center: [number, number];
   onBoundsChange: (bounds: L.LatLngBounds) => void;
 }
 
+// ------------------------------------------------------------------
+// MainView：Leafletを使用した地図表示、ピンの描画、現在地の表示を行う
+// ------------------------------------------------------------------
+
 export const MapView = ({ pins, center, onBoundsChange }: MapViewProps) => {
+
+  // --- Hooks ---
   const navigate = useNavigate();
 
+  // --- Helpers ---
+  // カスタムマーカーアイコンの生成（L.divIconを使用して、CSSでスタイリング可能なHTMLマーカーを作成）
   const createIcon = (thumbnailUrl: string) => {
       return L.divIcon({
           className: '',
@@ -42,6 +58,7 @@ export const MapView = ({ pins, center, onBoundsChange }: MapViewProps) => {
       });
   };
 
+  // --- Render ---
   return (
     <MapContainer 
       center={center}
@@ -49,24 +66,26 @@ export const MapView = ({ pins, center, onBoundsChange }: MapViewProps) => {
       scrollWheelZoom={true}
       style={{ height: '100vh', width: '100%' }}
     >
+      {/* ベース地図レイヤー (OpenStreetMap) */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* 座標が変わったら移動させる */}
+      {/* 制御コンポーネント */}
       <RecenterMap center={center} />
-      
       <MapEvents onMoveEnd={onBoundsChange} />
 
+      {/* 現在地マーカー (青い丸) */}
       <CircleMarker 
         center={center} 
-        radius={8} // 半径
+        radius={8}
         pathOptions={{ color: 'white', fillColor: '#4285F4', fillOpacity: 1, weight: 2 }}
       >
         <Popup>現在地</Popup>
       </CircleMarker>
 
+      {/* 投稿ピンの描画 */}
       {pins.map((pin) => (
         <Marker 
           key={pin.id} 

@@ -1,26 +1,18 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import api from '../services/api'; // パスを修正
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  login: (token: string) => Promise<void>;
-  logout: () => void;
-}
+import api from '../lib/axios';
+import type { User, AuthContextType } from '../types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// ------------------------------------------------------------------
+// AuthProvider：アプリケーション全体に認証状態（ユーザー情報、ログイン/ログアウト機能）を実装。
+// ------------------------------------------------------------------
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 初期化：リロード時にトークンがあればユーザー情報を取得
+  // 初期化処理
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('access_token');
@@ -37,12 +29,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initAuth();
   }, []);
 
+  // ログイン処理
   const login = async (token: string) => {
     localStorage.setItem('access_token', token);
-    const res = await api.get('/auth/me');
+    const res = await api.get<User>('/auth/me');
     setUser(res.data);
   };
 
+  // ログアウト処理
   const logout = () => {
     localStorage.removeItem('access_token');
     setUser(null);
@@ -55,6 +49,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     </AuthContext.Provider>
   );
 };
+
+// ------------------------------------------------------------------
+// Custom Hook
+// ------------------------------------------------------------------
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
