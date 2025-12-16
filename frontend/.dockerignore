@@ -1,24 +1,34 @@
-# --- 既存の設定 ---
+# --- 依存関係 (最重要) ---
 node_modules
+
+# --- ビルド生成物 ---
 build
 dist
-.env
-.git
 
-# --- 追加推奨 ---
-# npm / yarn のログファイル（エラーが出るたびに書き換わり、キャッシュ切れの原因になる）
+# --- 環境変数 ---
+.env
+.env.local
+
+# --- Git ---
+.git
+.gitignore
+
+# --- ログファイル (重要: キャッシュ切れを防ぐ) ---
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# テストカバレッジレポート
+# --- テストカバレッジ ---
 coverage
 .nyc_output
 
-# IDE・エディタ設定
+# --- IDE・エディタ設定 ---
 .vscode
 .idea
+*.swp
+*.swo
 
-# OS固有のファイル
+# --- OS固有 ---
 .DS_Store
 Thumbs.db

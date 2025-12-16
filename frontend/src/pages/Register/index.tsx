@@ -1,8 +1,9 @@
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../lib/axios';
+import api from '../../lib/axios';
 import { useState } from 'react';
-import type { ApiError, RegisterFormInputs } from '../types';
+import type { ApiError, RegisterFormInputs } from '../../types';
+import styles from './Register.module.css'
 
 // ------------------------------------------------------------------
 // RegisterPage：新規ユーザー登録画面
@@ -35,21 +36,25 @@ export const RegisterPage = () => {
 
   // --- Render ---
   return (
-    <div className="container" style={{ maxWidth: '400px', margin: '50px auto' }}>
-      <h2>ユーザー登録</h2>
+    <div className={styles.container}>
+      <h2 className={styles.title}>ユーザー登録</h2>
       {/* サーバー側エラーの表示 */}
-      {serverError && <p style={{ color: 'red' }}>{serverError}</p>}
+      {serverError && <p className={styles.errorMessage}>{serverError}</p>}
     
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div>
-          <label>ユーザー名</label>
+
+        {/* ユーザー名 */}
+        <div className={styles.formGroup}>
+          <label className={styles.label}>ユーザー名</label>
           <input 
             {...register('name', { required: true })} 
-            style={{ width: '100%' }} 
+            className={styles.input}
           />
         </div>
-        <div>
-          <label>メールアドレス</label>
+
+        {/* メールアドレス */}
+        <div className={styles.formGroup}>
+          <label className={styles.label}>メールアドレス</label>
           <input 
             type="email" 
             {...register('email', { 
@@ -59,29 +64,32 @@ export const RegisterPage = () => {
                 message: '正しいメールアドレス形式で入力してください'
               }
             })} 
-            style={{ width: '100%' }} 
+            className={styles.input}
           />
           {errors.email && (
-            <span style={{ color: 'red' }}>{errors.email.message}</span>
+            <span className={styles.errorMessage}>{errors.email.message}</span>
           )}
         </div>
-        <div>
-          <label>パスワード</label>
+
+        {/* パスワード */}
+        <div className={styles.formGroup}>
+          <label className={styles.label}>パスワード</label>
           <input 
             type="password" 
             {...register('password', { required: true, minLength: 6 })} 
-            style={{ width: '100%' }} 
+            className={styles.input}
           />
           {errors.password && (
-            <span style={{ color: 'red' }}>6文字以上で入力してください</span>
+            <span className={styles.errorMessage}>6文字以上で入力してください</span>
           )}
         </div>
-        <button type="submit" style={{ marginTop: '20px', width: '100%' }}>
+
+        <button type="submit" className={styles.button}>
           登録
         </button>
       </form>
       
-      <div style={{ marginTop: '10px' }}>
+      <div className={styles.linkContainer}>
         <Link to="/login">ログインはこちら</Link>
       </div>
     </div>

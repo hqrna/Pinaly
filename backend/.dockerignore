@@ -1,32 +1,39 @@
-# --- 既存の設定 ---
+# --- 依存関係・仮想環境 (最重要) ---
 __pycache__
 venv
-.env
-.git
+.venv
+env
 
-# --- 追加推奨 ---
-# コンパイル済みファイル（__pycache__以外に生成される場合があるため）
+# --- コンパイル済みファイル・バイトコード ---
 *.pyc
 *.pyo
 *.pyd
 
-# テスト・型チェックのキャッシュ（これらが変わるたびにビルドしたくない）
+# --- 環境変数・秘密情報 ---
+.env
+.env.local
+
+# --- Git ---
+.git
+.gitignore
+
+# --- テスト・型チェック・カバレッジ ---
 .pytest_cache
 .mypy_cache
 .coverage
 htmlcov
 
-# ローカルデータベース（コンテナ内にコピーしてしまうとデータが先祖返りしたり重くなる）
+# --- データ・ログ (重要: キャッシュ切れを防ぐ) ---
 db.sqlite3
 *.sqlite3
-
-# ログファイル
 *.log
 
-# IDE・エディタ設定
+# --- IDE・エディタ設定 ---
 .vscode
 .idea
+*.swp
+*.swo
 
-# OS固有のファイル（MacのFinder情報など）
+# --- OS固有 ---
 .DS_Store
 Thumbs.db

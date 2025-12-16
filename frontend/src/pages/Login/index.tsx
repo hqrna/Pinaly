@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../lib/axios';
-import { useAuth } from '../contexts/AuthContext';
-import type { LoginFormInputs, AuthResponse } from '../types';
+import api from '../../lib/axios';
+import { useAuth } from '../../contexts/AuthContext';
+import type { LoginFormInputs, AuthResponse } from '../../types';
+import styles from './Login.module.css'
 
 // ------------------------------------------------------------------
 // LoginPage：ユーザー認証を行うためのログインフォーム画面
@@ -30,33 +31,35 @@ export const LoginPage = () => {
 
   // --- Render ---
   return (
-    <div className="container" style={{ maxWidth: '400px', margin: '50px auto' }}>
-      <h2>ログイン</h2>
+    <div className={styles.container}>
+      <h2 className={styles.title}>ログイン</h2>
+
+      {/* エラーメッセージ */}
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div>
-          <label>メールアドレス</label>
+        <div className={styles.formGroup}>
+          <label className={styles.label}>メールアドレス</label>
           <input 
             type="email" 
             {...register('email', { required: true })} 
-            style={{ width: '100%' }} 
+            className={styles.input}
           />
         </div>
-        <div>
-          <label>パスワード</label>
+        <div className={styles.formGroup}>
+          <label className={styles.label}>パスワード</label>
           <input 
             type="password" 
             {...register('password', { required: true })} 
-            style={{ width: '100%' }} 
+            className={styles.input}
           />
         </div>
-        <button type="submit" style={{ marginTop: '20px', width: '100%' }}>
+        <button type="submit" className={styles.button}>
           ログイン
         </button>
       </form>
       
-      <div style={{ marginTop: '10px' }}>
+      <div className={styles.linkContainer}>
         <Link to="/register">新規登録はこちら</Link>
       </div>
     </div>
