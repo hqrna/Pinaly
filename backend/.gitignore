@@ -1,7 +1,13 @@
-# --- Python ---
+# --- Python Basics ---
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+
+# --- Distribution / Packaging ---
+dist/
+build/
+*.egg-info/
 
 # --- Virtual Environment ---
 venv/
@@ -10,23 +16,40 @@ env/
 
 # --- Environment Variables ---
 .env
+.env.*
+# 例外: exampleファイルはGit管理する
+!.env.example
 
 # --- AI Models / Large Files (容量制限対策) ---
-# GeoCLIPのモデルファイルなどが自動ダウンロードされた場合用
+# モデルの重みファイルや大規模データは除外
 *.pt
 *.pth
 *.onnx
+*.bin
 data/
-# modelsフォルダは許可するが、その中の重いファイルは無視する
+# modelsフォルダ内の重いファイルは無視
 models/*.pt
 models/*.pth
 models/*.bin
-# --- Database (SQLiteを使う場合) ---
+models/*.onnx
+
+# --- Database ---
 *.sqlite3
 *.db
 
-# テスト・静的解析のキャッシュ
+# --- Testing & Quality Checks ---
 .pytest_cache/
 .mypy_cache/
 htmlcov/
 .coverage
+.tox/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- OS / IDE Specifics (チーム開発でのトラブル防止) ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
