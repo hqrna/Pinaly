@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { Header } from './Header';
+import { Header } from './Sidebar';
 
 // ------------------------------------------------------------------
 // Layout：サイドバー（Header）を含むメインアプリケーションの共通枠
@@ -18,7 +18,7 @@ export const Layout = () => {
       <main style={{ width: '100%', height: '100%' }}>
         <Outlet />
       </main>
-      
+
     </div>
   );
 };
