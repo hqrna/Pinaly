@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { MapPage } from './pages/MapPage';
+import { LoginPage } from './pages/Login/index';
+import { RegisterPage } from './pages/Register/index';
+import { MapPage } from './pages/Map/index';
 import { type ReactNode } from 'react';
 
 // ------------------------------------------------------------------
