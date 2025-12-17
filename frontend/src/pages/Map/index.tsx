@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { MapView } from '../../components/Map/MapView';
 import { UploadModal } from '../../components/Upload/UploadModal';
-import { useAuth } from '../../contexts/AuthContext';
 import api from '../../lib/axios';
 import type { Pin } from '../../types';
 import L from 'leaflet';
-import styles from './Map.module.css'
+import styles from './MapPage.module.css'
+import { Plus } from 'lucide-react';
 
 // ------------------------------------------------------------------
 // MapPage：地図表示、ピンの取得、投稿モーダルの管理を行うメイン画面
@@ -13,9 +13,7 @@ import styles from './Map.module.css'
 
 export const MapPage = () => {
 
-  // --- Hooks & States ---
-  const { logout } = useAuth();
-
+  // --- States ---
   // 地図データ
   const [pins, setPins] = useState<Pin[]>([]);
   const [currentLocation, setCurrentLocation] = useState<[number, number]>([35.681236, 139.767125]);  // 初期位置は東京駅
@@ -85,12 +83,6 @@ export const MapPage = () => {
   return (
     <div className={styles.container}>
 
-      {/* Header Controls (ログアウト等) */}
-      <div className={styles.HeaderControls}>
-        <button onClick={logout} className={styles.logoutButton}>
-          ログアウト
-        </button>
-      </div>
       <MapView 
         pins={pins} 
         center={currentLocation}
@@ -103,7 +95,7 @@ export const MapPage = () => {
         onClick={() => setIsModalOpen(true)}
         aria-label='投稿する'
       >
-        +
+        <Plus size={24} />
       </button>
 
       {/* アップロードモーダル */}

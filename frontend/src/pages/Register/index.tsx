@@ -1,97 +1,132 @@
-import { useForm, type SubmitHandler } from 'react-hook-form';
-import { useNavigate, Link } from 'react-router-dom';
-import api from '../../lib/axios';
 import { useState } from 'react';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import api from '../../lib/axios';
+import { AuthLayout } from '../../components/Auth/AuthLayout';
 import type { ApiError, RegisterFormInputs } from '../../types';
-import styles from './Register.module.css'
+import styles from '../../styles/AuthForm.module.css';
 
 // ------------------------------------------------------------------
-// RegisterPage：新規ユーザー登録画面
+// RegisterPage：新規ユーザーの登録を行うページ
 // ------------------------------------------------------------------
 
 export const RegisterPage = () => {
+
+  // --- Hooks & States ---
+
+  // フォーム管理 (バリデーション・エラーメッセージ)
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterFormInputs>();
   
-  // --- Hooks & Status ---
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors } 
-  } = useForm<RegisterFormInputs>();
-  
+  // ルーティング用フック
   const navigate = useNavigate();
+
+  // サーバー側のバリデーションエラー用
   const [serverError, setServerError] = useState<string>('');
 
-  // --- Handlers ---
+  // --- Event Handlers ---
+
+  // 新規登録フォーム送信処理
   const onSubmit: SubmitHandler<RegisterFormInputs> = async (data) => {
     try {
       setServerError('');
+      // APIへユーザー登録リクエスト
       await api.post('/auth/register', data);
       alert('登録成功！ログインしてください。');
+
+      // 成功後、ログインページへ遷移
       navigate('/login');
     } catch (err: unknown) {
+
+      // APIエラーのハンドリング
       const error = err as ApiError;
-      setServerError(error.response?.data?.detail || '登録エラー');
+      setServerError(error.response?.data?.detail || '登録エラーが発生しました');
     }
   };
 
   // --- Render ---
   return (
-    <div className={styles.container}>
-      <h2 className={styles.title}>ユーザー登録</h2>
-      {/* サーバー側エラーの表示 */}
-      {serverError && <p className={styles.errorMessage}>{serverError}</p>}
-    
-      <form onSubmit={handleSubmit(onSubmit)}>
+    <AuthLayout
+      subtitle="アカウントを作成"
+      footerText="すでにアカウントをお持ちですか？"
+      footerLinkText="ログインはこちら"
+      footerLinkTo="/login"
+    >
 
-        {/* ユーザー名 */}
+        {/* サーバーエラーの表示エリア */}      
+      {serverError && <div className={styles.errorMessage}>{serverError}</div>}
+  
+      <form onSubmit={handleSubmit(onSubmit)}>
+        
+        {/* ユーザー名入力 */}
         <div className={styles.formGroup}>
-          <label className={styles.label}>ユーザー名</label>
           <input 
-            {...register('name', { required: true })} 
+            type="text"
+            {...register('name', { required: 'ユーザー名は必須です' })} 
             className={styles.input}
+            placeholder="ユーザー名"
+            disabled={isSubmitting}
           />
+          {errors.name && (
+             <span style={{ color: '#ef4444', fontSize: '0.8rem', marginLeft: '4px' }}>
+               {errors.name.message}
+             </span>
+          )}
         </div>
 
-        {/* メールアドレス */}
+        {/* メールアドレス入力 */}
         <div className={styles.formGroup}>
-          <label className={styles.label}>メールアドレス</label>
           <input 
-            type="email" 
+            type="email"
             {...register('email', { 
               required: 'メールアドレスは必須です',
               pattern: {
                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: '正しいメールアドレス形式で入力してください'
+                message: '正しいメールアドレスを入力してください'
               }
             })} 
             className={styles.input}
+            placeholder="メールアドレス"
+            disabled={isSubmitting}
           />
           {errors.email && (
-            <span className={styles.errorMessage}>{errors.email.message}</span>
+             <span style={{ color: '#ef4444', fontSize: '0.8rem', marginLeft: '4px' }}>
+               {errors.email.message}
+             </span>
           )}
         </div>
 
-        {/* パスワード */}
+        {/* パスワード入力 */}
         <div className={styles.formGroup}>
-          <label className={styles.label}>パスワード</label>
           <input 
-            type="password" 
-            {...register('password', { required: true, minLength: 6 })} 
+            type="password"
+            {...register('password', { 
+              required: 'パスワードは必須です',
+              minLength: {
+                value: 6,
+                message: 'パスワードは6文字以上で入力してください'
+              }
+            })} 
             className={styles.input}
+            placeholder="パスワード"
+            disabled={isSubmitting}
           />
           {errors.password && (
-            <span className={styles.errorMessage}>6文字以上で入力してください</span>
+             <span style={{ color: '#ef4444', fontSize: '0.8rem', marginLeft: '4px' }}>
+               {errors.password.message}
+             </span>
           )}
         </div>
-
-        <button type="submit" className={styles.button}>
-          登録
+        
+        {/* 登録ボタン */}
+        <button
+          type="submit"
+          className={styles.button}
+          disabled={isSubmitting}
+        >
+           {isSubmitting ? '登録中...' : '新規登録'}
         </button>
+        
       </form>
-      
-      <div className={styles.linkContainer}>
-        <Link to="/login">ログインはこちら</Link>
-      </div>
-    </div>
+    </AuthLayout>
   );
 };

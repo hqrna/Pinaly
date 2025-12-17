@@ -1,6 +1,8 @@
-/* 地図のコンテナ */
+/* -------------------------------------------------- */
+/* 地図コンテナ */
+/* -------------------------------------------------- */
 .mapContainer {
-  height: 100vh; /* 画面いっぱいに表示する場合 */
+  height: 100vh;
   width: 100%;
 }
 
@@ -8,23 +10,19 @@
 /* マーカー（ピン）関連 */
 /* -------------------------------------------------- */
 
-/* Leafletが生成するマーカーのラッパーdiv（透明にする） */
+/* マーカーの親コンテナ（Leaflet生成分） */
 .iconContainer {
   background: transparent;
   border: none;
 }
 
-/* 実際に画像を表示する丸いdiv */
+/* 写真を表示する丸型アイコン */
 .markerIcon {
   width: 40px;
   height: 40px;
-  
-  /* 画像の表示調整 */
   background-size: cover;
   background-position: center;
-  background-color: #ddd; /* 画像読み込み前の背景色 */
-  
-  /* 装飾 */
+  background-color: #ddd;
   border-radius: 50%;
   border: 2px solid white;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
@@ -34,14 +32,14 @@
 /* ポップアップ関連 */
 /* -------------------------------------------------- */
 
-/* ポップアップ全体 */
+/* ポップアップのコンテンツ枠 */
 .popupContent {
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  min-width: 120px; /* 極端に小さくなるのを防ぐ */
+  min-width: 120px;
 }
 
 /* ポップアップ内の画像 */
@@ -52,7 +50,7 @@
   border-radius: 4px;
 }
 
-/* タイトル */
+/* ポップアップ内のタイトル */
 .popupTitle {
   margin: 0;
   font-weight: bold;
@@ -60,7 +58,7 @@
   color: #333;
 }
 
-/* 詳細ボタン */
+/* 詳細表示などのアクションボタン */
 .popupButton {
   cursor: pointer;
   padding: 4px 12px;
@@ -69,9 +67,10 @@
   border: none;
   border-radius: 4px;
   font-size: 12px;
-  transition: background-color 0.2s; /* ホバー時の色変化を滑らかに */
+  transition: background-color 0.2s;
 }
 
 .popupButton:hover {
   background-color: #3367d6;
 }
+
