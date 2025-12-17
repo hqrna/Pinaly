@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap, CircleMarker, ZoomControl } from 'react-leaflet';
 import L from 'leaflet';
 import type { Pin } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
+import styles from './MapView.module.css'
 
 // ------------------------------------------------------------------
 // Helper Components
@@ -64,19 +65,23 @@ export const MapView = ({ pins, center, onBoundsChange }: MapViewProps) => {
       center={center}
       zoom={13} 
       scrollWheelZoom={true}
-      style={{ height: '100vh', width: '100%' }}
+      className={styles.mapContainer}
+      zoomControl={false}
     >
-      {/* ベース地図レイヤー (OpenStreetMap) */}
+      {/* ズームボタンを右上に配置 */}
+      <ZoomControl position="topright" />
+
+      {/* ベース地図レイヤー */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       
-      {/* 制御コンポーネント */}
+      {/* 制御用ユーティリティ */}
       <RecenterMap center={center} />
       <MapEvents onMoveEnd={onBoundsChange} />
 
-      {/* 現在地マーカー (青い丸) */}
+      {/* 現在地マーカー */}
       <CircleMarker 
         center={center} 
         radius={8}
@@ -93,16 +98,25 @@ export const MapView = ({ pins, center, onBoundsChange }: MapViewProps) => {
           icon={createIcon(pin.thumbnail_url)} 
         >
           <Popup>
-             <div style={{ textAlign: 'center' }}>
-               {pin.thumbnail_url && (
-                 <img src={pin.thumbnail_url} alt="thumb" style={{ width: '100px', height: '100px', objectFit: 'cover' }} />
-               )}
-               <p>{pin.title || 'No Title'}</p>
-               <button onClick={() => navigate(`/images/${pin.id}`)}>詳細</button>
-             </div>
+            <div className={styles.popupContent}>
+              {/* ポップアップ内画像 */}
+              {pin.thumbnail_url && (
+                <img src={pin.thumbnail_url} alt="thumb" className={styles.popupImage} />
+              )}
+              
+              <p className={styles.popupTitle}>{pin.title || 'No Title'}</p>
+              
+              <button 
+                className={styles.popupButton} 
+                onClick={() => navigate(`/images/${pin.id}`)}
+              >
+                詳細
+              </button>
+            </div>
           </Popup>
         </Marker>
       ))}
+
     </MapContainer>
   );
 };
