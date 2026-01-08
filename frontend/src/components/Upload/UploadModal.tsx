@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import api from '../../lib/axios';
 import type { UploadFormInputs } from '../../types';
+import styles from './UploadModal.module.css';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -70,40 +71,50 @@ export const UploadModal = ({ isOpen, onClose, onUploadSuccess }: UploadModalPro
 
   // --- Render ---
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h3>画像をアップロード</h3>
+    <div className={styles.overlay} onClick={handleClose}>
+      <div
+        className={styles.modalContent}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className={styles.title}>画像をアップロード</h3>
 
         <form onSubmit={handleSubmit(onSubmit)}>
           {/* ファイル入力 */}
           <input
             type="file"
             accept="image/*"
-            style={{ marginBottom: '10px' }}
+            className={styles.fileInput}
             {...fileUploadRegister}
             onChange={(e) => {
               fileUploadRegister.onChange(e);
               onFileChange(e);
             }}
           />
-          {/* プレビュー表示 */}
+
+          {/* プレビュー */}
           {previewUrl && (
-            <img src={previewUrl} alt="Preview" className="preview-image" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className={styles.previewImage}
+            />
           )}
-          {/* ボタンエリア */}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+
+          {/* ボタン */}
+          <div className={styles.buttonGroup}>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isUploading}
-              style={{ flex: 1, backgroundColor: '#ccc', color: 'black' }}
+              className={styles.cancelButton}
             >
               キャンセル
             </button>
+
             <button
               type="submit"
               disabled={isUploading || !previewUrl}
-              style={{ flex: 1 }}
+              className={styles.submitButton}
             >
               {isUploading ? '送信中...' : 'アップロード'}
             </button>
