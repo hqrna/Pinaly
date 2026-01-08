@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import styles from './Header.module.css';
+import styles from './Sidebar.module.css';
 import { 
   Menu, 
   ChevronLeft, 
@@ -12,10 +12,10 @@ import {
 } from 'lucide-react';
 
 // ------------------------------------------------------------------
-// Header：サイドバー形式のナビゲーションメニュー
+// Sidebar：サイドバー形式のナビゲーションメニュー
 // ------------------------------------------------------------------
 
-export const Header = () => {
+export const Sidebar = () => {
 
   // --- Hooks & States ---
   const [isOpen, setIsOpen] = useState(false);

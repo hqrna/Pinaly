@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { Header } from './Sidebar';
+import { Sidebar } from './Sidebar';
 
 // ------------------------------------------------------------------
 // Layout：サイドバー（Header）を含むメインアプリケーションの共通枠
@@ -12,7 +12,7 @@ export const Layout = () => {
     <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden' }}>
 
       {/* サイドバーナビゲーション */}      
-      <Header />
+      <Sidebar />
 
       {/* メインコンテンツエリア(各ページがOutletに描画される) */}
       <main style={{ width: '100%', height: '100%' }}>
