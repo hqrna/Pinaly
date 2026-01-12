@@ -1,256 +1,219 @@
 import uuid
+import logging
+from io import BytesIO
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Dict, Any, Optional
 from PIL import Image
-from PIL.ExifTags import TAGS, GPSTAGS
 from fastapi import UploadFile, HTTPException
 from app.db.supabase import supabase
+from app.utils.exif_reader import extract_exif_data
+from app.ml.geoclip_handler import ml_engine
+from app.crud import image as crud_image
+from app.crud import location as crud_location
+from app.crud import tag as crud_tag
 from app.schemas.image import ImageUpdate
-# 対応画像形式
-ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 
-# --- 既存のヘルパー関数 (_get_decimal_from_dms, extract_exif_data) は省略せず残してください ---
-def _get_decimal_from_dms(dms, ref):
-    # (前回と同じコード)
-    degrees = dms[0]
-    minutes = dms[1]
-    seconds = dms[2]
-    decimal = degrees + (minutes / 60.0) + (seconds / 3600.0)
-    if ref in ['S', 'W']:
-        decimal = -decimal
-    return decimal
+logger = logging.getLogger(__name__)
 
-def extract_exif_data(image: Image.Image):
-    # (前回と同じコード)
-    exif_data = image._getexif()
-    if not exif_data:
-        return None, None, None
-    gps_info = {}
-    taken_at = None
-    for tag, value in exif_data.items():
-        tag_name = TAGS.get(tag, tag)
-        if tag_name == "DateTimeOriginal":
-            try:
-                taken_at = datetime.strptime(value, "%Y:%m:%d %H:%M:%S")
-            except:
-                pass
-        if tag_name == "GPSInfo":
-            for t in value:
-                sub_tag = GPSTAGS.get(t, t)
-                gps_info[sub_tag] = value[t]
-    lat = None
-    lon = None
-    if gps_info:
-        if "GPSLatitude" in gps_info and "GPSLatitudeRef" in gps_info:
-            lat = _get_decimal_from_dms(gps_info["GPSLatitude"], gps_info["GPSLatitudeRef"])
-        if "GPSLongitude" in gps_info and "GPSLongitudeRef" in gps_info:
-            lon = _get_decimal_from_dms(gps_info["GPSLongitude"], gps_info["GPSLongitudeRef"])
-    return lat, lon, taken_at
+# --- 内部ヘルパー関数 ---
 
-# --- ① 画像アップロード (POST /api/v1/images) 用 ---
-async def create_image(file: UploadFile, user_id: str):
-    filename = file.filename
-    ext = filename.split(".")[-1].lower() if "." in filename else ""
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Invalid file type")
-
-    try:
-        content = await file.read()
-        from io import BytesIO
-        image_stream = BytesIO(content)
-        
-        with Image.open(image_stream) as img:
-            lat, lon, taken_at = extract_exif_data(img)
-            # 設計要件: GPS有無に応じて分岐
-            # EXIFがあれば location_status="EXIF_PRESENT", なければ "NO_GPS"
-        
-        file_path = f"{user_id}/{uuid.uuid4()}.{ext}"
-        bucket_name = "images"
-
-        # Storageへアップロード
-        supabase.storage.from_(bucket_name).upload(
-            path=file_path,
-            file=content,
-            file_options={"content-type": file.content_type}
-        )
-        public_url_res = supabase.storage.from_(bucket_name).get_public_url(file_path)
-        
-        # DB登録
-        image_data = {
-            "user_id": user_id,
-            "image_url": public_url_res,
-            "thumbnail_url": public_url_res,
-            "taken_at": taken_at.isoformat() if taken_at else None,
-            "location_status": "EXIF_PRESENT" if (lat and lon) else "NO_GPS",
-            "is_favorite": False
-        }
-        
-        img_res = supabase.table("images").insert(image_data).execute()
-        new_image = img_res.data[0]
-        image_id = new_image["id"]
-
-        # GPSがある場合のみ locations に登録
-        if lat is not None and lon is not None:
-            location_data = {
-                "image_id": image_id,
-                "latitude": lat,
-                "longitude": lon,
-                "source_type": "EXIF",
-                "geom": f"POINT({lon} {lat})"
-            }
-            supabase.table("locations").insert(location_data).execute()
-
-        # レスポンス用に結合データを整形
-        return {
-            **new_image,
-            "latitude": lat,
-            "longitude": lon
-        }
-
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Image upload failed: {str(e)}")
-
-# --- ② ギャラリー取得 (GET /api/v1/images) 用 ---
-async def get_images_list(user_id: str, limit: int = 20, offset: int = 0):
-    # ユーザーの画像をページネーション付きで取得
-    res = supabase.table("images")\
-        .select("*")\
-        .eq("user_id", user_id)\
-        .order("created_at", desc=True)\
-        .range(offset, offset + limit - 1)\
-        .execute()
+async def _get_image_or_404(image_id: int, user_id: str) -> Dict[str, Any]:
+    """DBから画像を取得し、存在しない場合は404エラーを投げる"""
+    res = crud_image.get_image(image_id, user_id)
+    if not res.data:
+        raise HTTPException(status_code=404, detail="指定された画像が見つかりません。")
     return res.data
 
-# --- ③ 詳細取得 (GET /api/v1/images/{id}) 用 ---
-async def get_image_detail(image_id: int, user_id: str):
-    # locations情報も結合して取得したいが、Supabase py clientの結合は少し癖があるため
-    # まずimageを取得し、必要ならlocationを引く形が確実
-    img_res = supabase.table("images").select("*").eq("id", image_id).eq("user_id", user_id).single().execute()
+
+# --- メインロジック: 画像管理 ---
+
+async def create_image(file: UploadFile, user_id: str) -> Dict[str, Any]:
+    """
+    画像のアップロード、EXIF解析、初期位置情報の登録を行う
+    """
+    content = await file.read()
     
-    if not img_res.data:
-        raise HTTPException(status_code=404, detail="Image not found")
+    # EXIFデータの抽出
+    try:
+        with Image.open(BytesIO(content)) as img:
+            lat, lon, taken_at = extract_exif_data(img)
+    except Exception as e:
+        logger.warning(f"EXIF extraction failed: {e}")
+        lat, lon, taken_at = None, None, None
+
+    # 地名取得 (EXIFがある場合のみ)
+    geoname = ml_engine.get_geoname(lat, lon) if (lat and lon) else None
     
-    image = img_res.data
+    # Storageへの保存
+    file_path = f"{user_id}/{uuid.uuid4()}"
+    try:
+        supabase.storage.from_("images").upload(
+            file_path, content, {"content-type": file.content_type}
+        )
+        url = supabase.storage.from_("images").get_public_url(file_path)
+    except Exception as e:
+        logger.error(f"Storage upload error: {e}")
+        raise HTTPException(status_code=500, detail="画像の保存に失敗しました。")
+
+    # DB登録 (画像基本情報)
+    img_data = {
+        "user_id": user_id, 
+        "image_url": url, 
+        "thumbnail_url": url,
+        "taken_at": taken_at.isoformat() if taken_at else None,
+        "location_status": "EXIF_PRESENT" if (lat and lon) else "NO_GPS"
+    }
+    new_image = crud_image.insert_image(img_data).data[0]
+
+    # DB登録 (位置情報)
+    if lat and lon:
+        crud_location.insert_location({
+            "image_id": new_image["id"], 
+            "latitude": lat, 
+            "longitude": lon,
+            "geoname": geoname, 
+            "source_type": "EXIF", 
+            "geom": f"POINT({lon} {lat})"
+        })
+
+    return {**new_image, "latitude": lat, "longitude": lon, "geoname": geoname}
+
+
+async def get_image_detail(image_id: int, user_id: str) -> Dict[str, Any]:
+    """
+    画像の詳細情報（位置、タグを含む）を取得する
+    """
+    image = await _get_image_or_404(image_id, user_id)
     
-    # 関連するlocationを取得
-    loc_res = supabase.table("locations").select("*").eq("image_id", image_id).maybe_single().execute()
+    # 位置情報の統合
+    loc_res = crud_location.get_location_by_image(image_id)
+    loc_data = loc_res.data if loc_res and loc_res.data else {}
     
-    # データを結合
-    if loc_res.data:
-        image["latitude"] = loc_res.data["latitude"]
-        image["longitude"] = loc_res.data["longitude"]
-        image["geoname"] = loc_res.data["geoname"]
-        image["address"] = loc_res.data.get("address") # DB設計にあれば
+    image.update({
+        "latitude": loc_data.get("latitude"),
+        "longitude": loc_data.get("longitude"),
+        "geoname": loc_data.get("geoname")
+    })
+    
+    # タグ情報の取得
+    image["tags"] = crud_tag.get_tags_by_image(image_id)
     
     return image
 
-# --- ④ 画像削除 (DELETE /api/v1/images/{id}) 用 ---
-async def delete_image(image_id: int, user_id: str):
-    # まず画像の存在確認と所有権確認
-    img_res = supabase.table("images").select("image_url").eq("id", image_id).eq("user_id", user_id).single().execute()
-    if not img_res.data:
-        raise HTTPException(status_code=404, detail="Image not found")
+
+async def get_images_list(user_id: str, limit: int = 20, offset: int = 0) -> List[Dict]:
+    """ユーザーの画像一覧を取得"""
+    res = crud_image.get_images_list(user_id, limit, offset)
+    return res.data
+
+
+async def delete_image(image_id: int, user_id: str) -> bool:
+    """DBとStorageの両方から画像を削除する"""
+    image = await _get_image_or_404(image_id, user_id)
     
-    # DBから削除 (Cascade設定しているので locations なども自動で消えるはずだが、Storageは消えない)
-    supabase.table("images").delete().eq("id", image_id).eq("user_id", user_id).execute()
+    # DBからの削除
+    crud_image.delete_image(image_id, user_id)
     
-    # Storageから削除 (URLからパスを抽出するロジックが必要)
-    # 例: https://.../storage/v1/object/public/photos/USER_ID/UUID.jpg
+    # Storageからの物理削除
     try:
-        url = img_res.data["image_url"]
-        # バケツ名以降のパスを取得
-        file_path = url.split("/public/photos/")[1] 
-        supabase.storage.from_("photos").remove(file_path)
-    except:
-        pass # Storage削除失敗はログに残す程度で、APIとしては成功を返す運用が多い
+        url = image["image_url"]
+        file_path = url.split("/public/images/")[1] 
+        supabase.storage.from_("images").remove(file_path)
+    except Exception as e:
+        logger.error(f"Storage cleanup failed for {image_id}: {e}")
+        # Storage削除失敗でもDB側が消えていればAPIとしては成功とする
     
     return True
 
-def _update_image_tags(image_id: int, tag_names: List[str]):
+
+# --- メインロジック: 位置解析・確定 ---
+
+async def analyze_image_location(image_id: int, user_id: str) -> Dict[str, Any]:
+    """AIを用いて画像の位置を推論し、候補を保存する"""
+    image = await _get_image_or_404(image_id, user_id)
+    
+    # MLエンジンで候補算出
+    candidates = await ml_engine.predict_location(image["image_url"])
+    
+    # 候補データの保存用整形
+    c_data = [{
+        "image_id": image_id, 
+        "candidate_index": c["index"], 
+        "latitude": c["latitude"], 
+        "longitude": c["longitude"], 
+        "confidence_score": c["confidence"], 
+        "geoname": c["geoname"]
+    } for c in candidates]
+    
+    crud_location.save_candidates(image_id, c_data)
+    crud_image.update_status(image_id, "AI_CANDIDATE")
+    
+    return {"status": "AI_CANDIDATE", "candidates": candidates}
+
+async def get_location_candidates(image_id: int, user_id: str) -> List[Dict]:
     """
-    画像に紐付くタグを更新する。
-    1. 既存のタグ紐付けを削除
-    2. 入力されたタグ名が tags テーブルになければ作成
-    3. image_tags テーブルに紐付けを作成
+    保存されているAI解析の候補リストを取得する
     """
-    if tag_names is None:
-        return
-
-    # 1. 既存の紐付けを全削除 (洗い替え)
-    supabase.table("image_tags").delete().eq("image_id", image_id).execute()
-
-    if not tag_names:
-        return
-
-    # 2. タグIDの解決 (Find or Create)
-    tag_ids = []
+    # 画像の存在と所有権を確認
+    await _get_image_or_404(image_id, user_id)
     
-    # 既存タグを一括取得
-    existing_tags = supabase.table("tags").select("id, name").in_("name", tag_names).execute()
-    existing_map = {t["name"]: t["id"] for t in existing_tags.data}
+    # CRUD経由で候補データを取得
+    res = crud_location.get_candidates(image_id)
+    return res.data if res and res.data else []
 
-    for name in tag_names:
-        name = name.strip()
-        if not name:
-            continue
-            
-        if name in existing_map:
-            tag_ids.append(existing_map[name])
-        else:
-            # 新規作成
-            # (注意: tagsテーブルのポリシーによっては insert 権限が必要)
-            res = supabase.table("tags").insert({"name": name}).execute()
-            if res.data:
-                tag_ids.append(res.data[0]["id"])
+async def confirm_location(image_id: int, candidate_id: int, user_id: str) -> Dict[str, str]:
+    """選択された候補を確定位置として登録する"""
+    try:
+        cand_res = crud_location.get_candidate_by_id(image_id, candidate_id)
+        if not cand_res.data:
+            raise HTTPException(status_code=404, detail="指定された候補が見つかりません。")
+        
+        cand = cand_res.data
+        
+        # 位置本登録
+        crud_location.insert_location({
+            "image_id": image_id, 
+            "latitude": cand["latitude"], 
+            "longitude": cand["longitude"],
+            "geoname": cand["geoname"], 
+            "source_type": "AI推定", 
+            "confidence_score": cand["confidence_score"],
+            "geom": f"POINT({cand['longitude']} {cand['latitude']})"
+        })
+        
+        # ステータス更新と候補データの掃除
+        crud_image.update_status(image_id, "CONFIRMED")
+        crud_location.delete_candidates(image_id)
+        
+        return {"status": "CONFIRMED"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Confirmation error: {e}")
+        raise HTTPException(status_code=400, detail="位置の確定処理に失敗しました。")
+
+
+async def reanalyze_location(image_id: int, user_id: str) -> Dict[str, Any]:
+    """既存の候補を削除して再解析を行う"""
+    crud_location.delete_candidates(image_id)
+    return await analyze_image_location(image_id, user_id)
+
+
+# --- メインロジック: 情報更新 ---
+
+async def update_image_info(image_id: int, user_id: str, update_in: ImageUpdate) -> Dict[str, Any]:
+    """メタデータとお気に入り状態、およびタグを更新する"""
+    await _get_image_or_404(image_id, user_id)
     
-    # 3. 新しい紐付けを登録
-    if tag_ids:
-        insert_data = [{"image_id": image_id, "tag_id": tid} for tid in tag_ids]
-        supabase.table("image_tags").insert(insert_data).execute()
+    # 基本情報の更新
+    update_data = update_in.model_dump(exclude={"tags"}, exclude_unset=True)
+    if update_data:
+        update_data["updated_at"] = datetime.now().isoformat()
+        crud_image.update_image(image_id, user_id, update_data)
 
-
-# --- 修正: 詳細取得 (タグ情報も取得するように変更) ---
-async def get_image_detail(image_id: int, user_id: str):
-    # 画像本体
-    img_res = supabase.table("images").select("*").eq("id", image_id).eq("user_id", user_id).single().execute()
-    if not img_res.data:
-        raise HTTPException(status_code=404, detail="Image not found")
-    
-    image = img_res.data
-    
-    # Locations結合
-    loc_res = supabase.table("locations").select("*").eq("image_id", image_id).maybe_single().execute()
-    if loc_res.data:
-        image["latitude"] = loc_res.data["latitude"]
-        image["longitude"] = loc_res.data["longitude"]
-        image["geoname"] = loc_res.data["geoname"]
-
-    # ★追加: Tags結合
-    # Supabaseの結合クエリで tags を取得する
-    tags_res = supabase.table("image_tags").select("tag_id, tags(id, name)").eq("image_id", image_id).execute()
-    
-    # データ整形: [{"tag_id": 1, "tags": {"id": 1, "name": "..."}}] -> [{"id": 1, "name": "..."}]
-    image["tags"] = [item["tags"] for item in tags_res.data if item.get("tags")]
-    
-    return image
-
-
-# --- 追加: 画像情報更新 (PUT対応) ---
-async def update_image_info(image_id: int, user_id: str, update_in: ImageUpdate):
-    # まず更新データ作成
-    data = update_in.model_dump(exclude={"tags"}, exclude_unset=True) # tagsは別処理
-    
-    if data:
-        data["updated_at"] = datetime.now().isoformat()
-        res = supabase.table("images").update(data).eq("id", image_id).eq("user_id", user_id).execute()
-        if not res.data:
-             raise HTTPException(status_code=404, detail="Image not found")
-
-    # タグの更新 (tagsフィールドが含まれている場合のみ)
+    # タグの同期
     if update_in.tags is not None:
-        _update_image_tags(image_id, update_in.tags)
+        crud_tag.sync_tags(image_id, update_in.tags)
     
-    # 更新後の最新状態を返す
     return await get_image_detail(image_id, user_id)
