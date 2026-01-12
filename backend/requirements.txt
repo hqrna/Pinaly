@@ -1,21 +1,38 @@
-# --- FastAPI 必須 ---
+# --- FastAPI Framework ---
 fastapi
 uvicorn
 python-dotenv
 python-multipart
-requests
-httpx
-supabase
 pydantic-settings
 email-validator
+
+# --- Database & Storage (Supabase) ---
+supabase
+requests
+httpx
+
+# --- Image Processing ---
+# pillow-heifはiPhoneのHEIC形式を扱うために必須
+Pillow
 pillow-heif
 
-# --- GeoCLIP / AI 関連 (必要最小限) ---
-# バージョン指定を外すことで、Docker環境に合うものを自動選択させます
+# --- AI Core (PyTorch CPU) ---
+# 依存関係の競合を防ぐため、torch/torchvisionをセットで指定
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
 numpy
-Pillow
-torch --index-url https://download.pytorch.org/whl/cpu
-# ※ GPUを使う場合は --index-url ... の行を削除して torch だけにする
 
-# その他必要なツール
+# --- OpenAI CLIP (GeoCLIP Backbone) ---
+# CLIPのテキスト処理・正規化に必要
+ftfy
+regex
+git+https://github.com/openai/CLIP.git
+
+# --- GeoCLIP & Utilities ---
+# 進捗表示用
 tqdm
+# 座標から住所への変換
+geopy
+# GeoCLIP本体
+geoclip
